@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: "2010-09-09"
+#AWS_REGION=us-east-1 aws cloudformation deploy --stack-name local-infra --template-file template.yaml --capabilities CAPABILITY_IAM
+#AWS_REGION=us-east-1 aws cloudformation delete-stack --stack-name local-infra
+Description: My template
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.31.0.0/16
+      
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  GatewayAttachement:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      # Has to be within the vpc CIDR
+      CidrBlock: 172.31.48.0/20
+      MapPublicIpOnLaunch: true
+      # !Ref Vpc is equivalent to !GetAtt Vpc.VpcId
+      VpcId: !Ref Vpc
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachement
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetOneRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 172.31.64.0/20
+      VpcId: !Ref Vpc
+
+Outputs:
+  VpcId:
+    Description: Id of the VPC
+    Value: !Ref Vpc
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCID"
+
+  PublicSubnetId:
+    Description: Id of the public subnet
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnetID"
+
+  PrivateSubnetId:
+    Description: Id of the private subnet
+    Value: !Ref PrivateSubnet
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnetID"

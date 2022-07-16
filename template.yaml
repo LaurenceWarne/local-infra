@@ -3,88 +3,81 @@ AWSTemplateFormatVersion: "2010-09-09"
 #AWS_REGION=us-east-1 aws cloudformation delete-stack --stack-name local-infra
 Description: My template
 Parameters:
-  DefaultVpcId:
+  BaseStackName:
     Type: String
-    Default: vpc-0f90c5a636f597cdf
+    Description: Name of the base stack
+
 Resources:
-  PublicSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      # Has to be within the vpc CIDR
-      CidrBlock: 172.31.48.0/20
-      MapPublicIpOnLaunch: true
-      VpcId:
-        Ref: DefaultVpcId
-  PrivateSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: 172.31.64.0/20
-      VpcId:
-        Ref: DefaultVpcId
 
   SSHSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: SSH access
-      VpcId:
-         Ref: DefaultVpcId
+      VpcId: !ImportValue
+        'Fn::Sub': '${BaseStackName}-VPCID'
       # When you specify a VPC security group, Amazon EC2 creates a default egress rule that allows egress traffic on all ports and IP protocols to any location.
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 22
-        ToPort: 22
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
   HTTPSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: HTTP access
-      VpcId:
-         Ref: DefaultVpcId
+      VpcId: !ImportValue
+        'Fn::Sub': '${BaseStackName}-VPCID'
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: "-1"
           CidrIp: 0.0.0.0/0
-
-  EcsTaskExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: [ecs-tasks.amazonaws.com]
-            Action: ['sts:AssumeRole']
-      Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-                
+          
   BastionEC2: 
     Type: AWS::EC2::Instance
     Properties:
       ImageId: ami-04505e74c0741db8d
       InstanceType: t2.micro
       KeyName: rsa
-      SubnetId: !Ref PublicSubnet
+      SubnetId: !ImportValue
+        'Fn::Sub': '${BaseStackName}-PublicSubnetID'
       SecurityGroupIds:
         - !Ref SSHSecurityGroup
 
-  TestEC2: 
+  TestEC2:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: ami-04505e74c0741db8d
       InstanceType: t2.micro
-      SubnetId: !Ref PrivateSubnet
+      SubnetId: !ImportValue
+        'Fn::Sub': '${BaseStackName}-PrivateSubnetID'
       SecurityGroupIds:
-        - !Ref HTTPSecurityGroup
-        
+        - !Ref HTTPSecurityGroup 
+
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: MiscCluster
+
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - 'ecs-tasks.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      
   ECSTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -92,15 +85,16 @@ Resources:
       Memory: 512
       NetworkMode: awsvpc
       # Tasks and services that use the awsvpc network mode require the Amazon ECS service-linked role to provide Amazon ECS with the permissions to make calls to other AWS services on your behalf
-      ExecutionRoleArn: !GetAtt EcsTaskExecutionRole.Arn
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
       ContainerDefinitions:
         - Name: my-container
           Image: nginx
       RequiresCompatibilities:
         - EC2
-  ECSService: 
+
+  ECSService:
     Type: AWS::ECS::Service
-    Properties: 
+    Properties:
       DesiredCount: 1
       Cluster: !Ref ECSCluster
       LaunchType: FARGATE
@@ -111,5 +105,6 @@ Resources:
           SecurityGroups:
             - !Ref HTTPSecurityGroup
           Subnets:
-            - !Ref PublicSubnet
+            - !ImportValue
+              'Fn::Sub': '${BaseStackName}-PublicSubnetID'
       TaskDefinition: !Ref ECSTaskDefinition
