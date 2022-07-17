@@ -18,13 +18,28 @@ Resources:
       VpcId: !Ref Vpc
       InternetGatewayId: !Ref InternetGateway
 
-  PublicSubnet:
+  PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
+      AvailabilityZone:
+        Fn::Select: 
+        - 0
+        - Fn::GetAZs: !Ref "AWS::Region"
+      CidrBlock: 172.31.0.0/20
       # Has to be within the vpc CIDR
-      CidrBlock: 172.31.48.0/20
       MapPublicIpOnLaunch: true
       # !Ref Vpc is equivalent to !GetAtt Vpc.VpcId
+      VpcId: !Ref Vpc
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select: 
+        - 1
+        - Fn::GetAZs: !Ref "AWS::Region"
+      CidrBlock: 172.31.48.0/20
+      MapPublicIpOnLaunch: true
       VpcId: !Ref Vpc
 
   PublicRouteTable:
@@ -40,10 +55,16 @@ Resources:
       DestinationCidrBlock: '0.0.0.0/0'
       GatewayId: !Ref InternetGateway
 
-  PublicSubnetOneRouteTableAssociation:
+  PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnet
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRouteTable
 
   PrivateSubnet:
@@ -59,11 +80,17 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-VPCID"
 
-  PublicSubnetId:
-    Description: Id of the public subnet
-    Value: !Ref PublicSubnet
+  PublicSubnet1Id:
+    Description: Id of public subnet 1
+    Value: !Ref PublicSubnet1
     Export:
-      Name: !Sub "${AWS::StackName}-PublicSubnetID"
+      Name: !Sub "${AWS::StackName}-PublicSubnet1ID"
+
+  PublicSubnet2Id:
+    Description: Id of public subnet 2
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet2ID"
 
   PrivateSubnetId:
     Description: Id of the private subnet
