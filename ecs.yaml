@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-# aws cloudformation deploy --stack-name ecs-aiohttp-server-example --template-file ecs.yaml --capabilities CAPABILITY_IAM --parameters-overrides "BaseStackName=base"
+# aws cloudformation deploy --stack-name ecs-aiohttp-server-example --template-file ecs.yaml --capabilities CAPABILITY_IAM --parameter-overrides "BaseStackName=base"
 Parameters:
   BaseStackName:
     Type: String
@@ -60,6 +60,7 @@ Resources:
     Properties:
       ClusterName: AioHTTPServerExampleCluster
 
+  # IAM role that executes ECS actions such as pulling the image and storing the application logs in cloudwatch
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -83,6 +84,8 @@ Resources:
       NetworkMode: awsvpc
       # Tasks and services that use the awsvpc network mode require the Amazon ECS service-linked role to provide Amazon ECS with the permissions to make calls to other AWS services on your behalf
       ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      # The TaskRole is the IAM role used by the task itself. For example, if your container wants to call other AWS services like S3, SQS, etc then those permissions would need to be covered by the TaskRole
+      # TaskRoleArn: ???
       ContainerDefinitions:
         - Name: aiohttp-server-container
           Image: laurencewarne/aiohttp-server-example:latest

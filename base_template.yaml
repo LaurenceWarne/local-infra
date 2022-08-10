@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
-#AWS_REGION=us-east-1 aws cloudformation deploy --stack-name local-infra --template-file template.yaml --capabilities CAPABILITY_IAM
-#AWS_REGION=us-east-1 aws cloudformation delete-stack --stack-name local-infra
+#AWS_REGION=us-east-1 aws cloudformation deploy --stack-name base --template-file template.yaml --capabilities CAPABILITY_IAM
+#AWS_REGION=us-east-1 aws cloudformation delete-stack --stack-name base
 Description: My template
 
 Resources:
