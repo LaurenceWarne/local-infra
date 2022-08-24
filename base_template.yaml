@@ -73,6 +73,9 @@ Resources:
       CidrBlock: 172.31.64.0/20
       VpcId: !Ref Vpc
 
+  MiscBucket:
+    Type: AWS::S3::Bucket
+
 Outputs:
   VpcId:
     Description: Id of the VPC
@@ -97,3 +100,10 @@ Outputs:
     Value: !Ref PrivateSubnet
     Export:
       Name: !Sub "${AWS::StackName}-PrivateSubnetID"
+
+  MiscBucketName:
+    Description: Name of the misc s3 bucket
+    Value: !Ref MiscBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-MiscBucket"
+  
