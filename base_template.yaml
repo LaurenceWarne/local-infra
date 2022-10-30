@@ -8,6 +8,9 @@ Resources:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 172.31.0.0/16
+      # The following two options are required to use private hosted zones
+      EnableDnsSupport: true  # Enabled by default
+      EnableDnsHostnames: true
       
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -75,6 +78,28 @@ Resources:
 
   MiscBucket:
     Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      # Specifying these parameters marks the zone as internal
+      VPCs:
+        - VPCId: !Ref Vpc
+          VPCRegion: !Ref "AWS::Region"
+      Name: example.com
+
+  Route53Record:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: s3.example.com
+      Type: CNAME
+      TTL: 60
+      ResourceRecords:
+        - !GetAtt MiscBucket.DomainName
 
 Outputs:
   VpcId:
