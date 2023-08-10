@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
-#AWS_REGION=us-east-1 aws cloudformation deploy --stack-name base --template-file template.yaml --capabilities CAPABILITY_IAM
+#AWS_REGION=us-east-1 aws cloudformation deploy --stack-name base --template-file base_template.yaml --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 #AWS_REGION=us-east-1 aws cloudformation delete-stack --stack-name base
-Description: My template
+Description: Base template
 
 Resources:
   Vpc:
@@ -25,8 +25,8 @@ Resources:
         Fn::Select: 
         - 0
         - Fn::GetAZs: !Ref "AWS::Region"
-      CidrBlock: 172.31.0.0/20
       # Has to be within the vpc CIDR
+      CidrBlock: 172.31.0.0/20
       MapPublicIpOnLaunch: true
       # !Ref Vpc is equivalent to !GetAtt Vpc.VpcId
       VpcId: !Ref Vpc
@@ -75,6 +75,42 @@ Resources:
 
   MiscBucket:
     Type: AWS::S3::Bucket
+
+  AdminGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: Administrators
+
+  DenyAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Groups:
+        - !Ref AdminGroup
+      PolicyName: BlockMostAccessUnlessSignedInWithMFA
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Sid: BlockMostAccessUnlessSignedInWithMFA
+          Effect: Deny
+          NotAction: 
+            - 'iam:CreateVirtualMFADevice'
+            - 'iam:DeleteVirtualMFADevice'
+            - 'iam:ListVirtualMFADevices'
+            - 'iam:EnableMFADevice'
+            - 'iam:ResyncMFADevice'
+            - 'iam:ListAccountAliases'
+            - 'iam:ListUsers'
+            - 'iam:ListSSHPublicKeys'
+            - 'iam:ListAccessKeys'
+            - 'iam:ListServiceSpecificCredentials'
+            - 'iam:ListMFADevices'
+            - 'iam:GetAccountSummary'
+            - 'sts:GetSessionToken'
+          Resource: "*"
+          Condition: 
+            Bool: 
+              aws:MultiFactorAuthPresent: false
+              aws:ViaAWSService: false
 
 Outputs:
   VpcId:
