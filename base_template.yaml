@@ -123,6 +123,30 @@ Resources:
               aws:MultiFactorAuthPresent: false
               aws:ViaAWSService: false
 
+  DeployGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: deploy-access
+
+  DeployPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Groups:
+        - !Ref DeployGroup
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "cloudformation:CreateStack"
+              - "cloudformation:DescribeStacks"
+              - "cloudformation:CreateChangeSet"
+              - "cloudformation:DescribeChangeSet"
+              - "cloudformation:DeleteChangeSet"
+              - "cloudformation:ExecuteChangeSet"
+            Resource: "*"
+      PolicyName: deploy-policy
+
 Outputs:
   VpcId:
     Description: Id of the VPC
@@ -153,4 +177,9 @@ Outputs:
     Value: !Ref MiscBucket
     Export:
       Name: !Sub "${AWS::StackName}-MiscBucket"
-  
+
+  DeployGroupName:
+    Description: Name of the misc s3 bucket
+    Value: !Ref DeployGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-DeployGroup"
