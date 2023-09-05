@@ -122,8 +122,20 @@ Resources:
             Bool: 
               aws:MultiFactorAuthPresent: false
               aws:ViaAWSService: false
- 
+
+  # https://github.com/aws-actions/configure-aws-credentials#sample-iam-oidc-cloudformation-template
+  GithubOidc:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: 
+        - sts.amazonaws.com
+      # Note that the thumbprint has been set to all F's because the thumbprint is not used when authenticating tokens.actions.githubusercontent.com. Instead, IAM uses its library of trusted CAs to authenticate. However, this value is still required by the API
+      ThumbprintList:
+        - ffffffffffffffffffffffffffffffffffffffff              
+
 Outputs:
+
   VpcId:
     Description: Id of the VPC
     Value: !Ref Vpc
@@ -153,3 +165,9 @@ Outputs:
     Value: !Ref MiscBucket
     Export:
       Name: !Sub "${AWS::StackName}-MiscBucket"
+
+  GithubOidc:
+    Description: Github OIDC
+    Value: !Ref GithubOidc
+    Export:
+      Name: !Sub "${AWS::StackName}-GithubOidc"
