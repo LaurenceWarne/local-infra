@@ -1,7 +1,11 @@
 AWSTemplateFormatVersion: "2010-09-09"
-#AWS_REGION=us-east-1 aws cloudformation deploy --stack-name base --template-file base_template.yaml --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+#AWS_REGION=us-east-1 aws cloudformation deploy --stack-name base --template-file base_template.yaml --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides "DeveloperEmail=xyz@example.com"
 #AWS_REGION=us-east-1 aws cloudformation delete-stack --stack-name base
 Description: Base template
+Parameters:
+  DeveloperEmail:
+    Type: String
+    Description: Email to add to general notifications
 
 Resources:
   Vpc:
@@ -72,6 +76,35 @@ Resources:
     Properties:
       CidrBlock: 172.31.64.0/20
       VpcId: !Ref Vpc
+
+  GeneralNotificationsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: general-notifications
+      DisplayName: General Notifications
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref DeveloperEmail
+
+  # Plausibly this should be region specific or in a non-region specific stack
+  Budget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: Sanity Check
+        BudgetType: COST
+        TimeUnit: DAILY
+        BudgetLimit:
+          Amount: 1
+          Unit: USD
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            Threshold: 100
+            ComparisonOperator: GREATER_THAN
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref GeneralNotificationsTopic
 
   MiscBucket:
     Type: AWS::S3::Bucket
@@ -171,3 +204,9 @@ Outputs:
     Value: !Ref GithubOidc
     Export:
       Name: !Sub "${AWS::StackName}-GithubOidc"
+
+  GeneralNotificationsTopic:
+    Description: General Notifications Topic
+    Value: !Ref GeneralNotificationsTopic
+    Export:
+      Name: !Sub "${AWS::StackName}-GeneralNotificationsTopic"
